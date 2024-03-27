@@ -1,12 +1,21 @@
 ﻿@page "/"
 @attribute [Authorize]
 
+@using Chinook.ClientModels
 @using Chinook.Models
+@using Chinook.Services
+@using Chinook.Services.Interfaces
 @using Microsoft.EntityFrameworkCore
+
+@inject IArtistService ArtistsService
 
 <PageTitle>Index</PageTitle>
 
 <h1>Artists</h1>
+
+<div class="form-group">
+    <input type="text" class="form-control" placeholder="Search artist..." @bind="searchTerm" @oninput="SearchArtists" />
+</div>
 
 @if (Artists == null)
 {
@@ -34,25 +43,34 @@ else
 }
 
 @code {
-    private List<Artist> Artists;
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
+    private List<ArtistClientModel>? Artists;
+    private string searchTerm;
 
     protected override async Task OnInitializedAsync() {
         await InvokeAsync(StateHasChanged);
         Artists = await GetArtists();
     }
 
-    public async Task<List<Artist>> GetArtists()
-    {   
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        var users = dbContext.Users.Include(a => a.UserPlaylists).ToList();
-        
-        return dbContext.Artists.ToList();
+    public async Task<List<ArtistClientModel>> GetArtists()
+    {
+        return await ArtistsService.GetArtistsAsync();
     }
 
-    public async Task<List<Album>> GetAlbumsForArtist(int artistId)
+    public async Task<List<AlbumClientModel>> GetAlbumsForArtist(int artistId)
     {
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
+        return await ArtistsService.GetAlbumsByArtistIdAsync(artistId);
+    }
+
+    private async Task SearchArtists(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            Artists = await ArtistsService.GetArtistsBySearchAsync(searchTerm);
+        }
+        else
+        {
+            Artists = await GetArtists();
+        }
     }
 }

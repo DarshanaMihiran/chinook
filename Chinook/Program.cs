@@ -1,6 +1,8 @@
 using Chinook;
 using Chinook.Areas.Identity;
 using Chinook.Models;
+using Chinook.Services;
+using Chinook.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +15,13 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<ChinookUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ChinookContext>();
 
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
 builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<ChinookUser>>();
+builder.Services.AddScoped<IArtistService, ArtistService>();
+builder.Services.AddScoped<IPlaylistService, PlaylistService>();
 
 var app = builder.Build();
 
