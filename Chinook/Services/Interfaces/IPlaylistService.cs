@@ -1,4 +1,5 @@
 ﻿using Chinook.ClientModels;
+using Chinook.Models;
 
 namespace Chinook.Services.Interfaces
 {
@@ -9,5 +10,8 @@ namespace Chinook.Services.Interfaces
         Task UnfavoriteTrackAsync(long trackId, string currentUserId);
         Task<List<ClientModels.Playlist>> GetPlaylistsByUserIdAsync(string currentUserId);
         Task<long> AddTrackToThePlaylist(long trackId, string PlaylistName, string currentUserId);
+        Task AddTrackToPlaylist(long playlistId, long trackId);
+        Task RemoveTrackFromPlaylist(long trackId, long playlistId);
+        Task<ClientModels.Playlist> GetPlaylistById(long playlistId, string currentUserId);
     }
 }

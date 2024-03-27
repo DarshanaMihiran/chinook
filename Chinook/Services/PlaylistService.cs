@@ -4,6 +4,7 @@ using global::Chinook.Helpers;
 using global::Chinook.Models;
 using global::Chinook.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using NuGet.DependencyResolver;
 
 namespace Chinook.Services
 {
@@ -16,6 +17,7 @@ namespace Chinook.Services
             _context = context;
         }
 
+        #region Public Methods
         /// <summary>
         /// Get list of tracks by artist id asynchronously
         /// </summary>
@@ -44,9 +46,8 @@ namespace Chinook.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task UnfavoriteTrackAsync(long trackId, string currentUserId)
         {
-            var track = await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException("Track not found");
             var favoritePlaylist = await GetFavoritePlaylist(currentUserId) ?? throw new ArgumentException("Favorites not found");
-            await RemoveTrackFromFavorites(track, favoritePlaylist.PlaylistId);
+            await RemoveTrackFromPlaylist(trackId, favoritePlaylist.PlaylistId);
         }
 
         /// <summary>
@@ -61,7 +62,7 @@ namespace Chinook.Services
 
             if (favoritePlaylist != null)
             {
-                await AddTrackToPlaylist(favoritePlaylist.PlaylistId, track);
+                await AddTrackToPlaylist(favoritePlaylist.PlaylistId, trackId);
             }
             else
             {
@@ -99,6 +100,61 @@ namespace Chinook.Services
             await CreateUserPlaylistAsync(playList, currentUserId);
             return playList.PlaylistId;
         }
+
+        /// <summary>
+        /// Add track to playlist asynchronously
+        /// </summary>
+        /// <param name="playlistId">Id of the playlist</param>
+        /// <param name="track">Track object</param>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task AddTrackToPlaylist(long playlistId, long trackId)
+        {
+            var track = await GetTrackById(trackId);
+            var playlist = await _context.Playlists.FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
+            playlist.Tracks.Add(track);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Remove track from favorites asynchronously
+        /// </summary>
+        /// <param name="track">Track object</param>
+        /// <param name="playlistId">Id of the playlist</param>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task RemoveTrackFromPlaylist(long trackId, long playlistId)
+        {
+            var track = await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException("Track not found");
+            var playlist = await _context.Playlists.Include(x => x.Tracks).FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
+            playlist.Tracks.Remove(track);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Get playlist by playlist id
+        /// </summary>
+        /// <param name="currentUserId">Logged user id</param>
+        /// <param name="playlistId">Id of the playlist</param>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task<ClientModels.Playlist> GetPlaylistById(long playlistId, string currentUserId)
+        {
+            return await _context.Playlists
+            .Include(a => a.Tracks).ThenInclude(a => a.Album).ThenInclude(a => a.Artist)
+            .Where(p => p.PlaylistId == playlistId)
+            .Select(p => new ClientModels.Playlist()
+            {
+                Name = p.Name,
+                Tracks = p.Tracks.Select(t => new ClientModels.PlaylistTrack()
+                {
+                    AlbumTitle = t.Album.Title,
+                    ArtistName = t.Album.Artist.Name,
+                    TrackId = t.TrackId,
+                    TrackName = t.Name,
+                    IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == currentUserId && up.Playlist.Name == "Favorites")).Any()
+                }).ToList()
+            })
+            .FirstOrDefaultAsync();
+        }
+        #endregion
 
         #region Private Methods
         /// <summary>
@@ -161,32 +217,6 @@ namespace Chinook.Services
                 UserId = currentUserId
             };
             _context.UserPlaylists.Add(userPlayList);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Remove track from favorites asynchronously
-        /// </summary>
-        /// <param name="track">Track object</param>
-        /// <param name="playlistId">Id of the playlist</param>
-        /// <exception cref="ArgumentException"></exception>
-        private async Task RemoveTrackFromFavorites(Track track, long playlistId)
-        {
-            var playlist = await _context.Playlists.Include(x => x.Tracks).FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
-            playlist.Tracks.Remove(track);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Add track to playlist asynchronously
-        /// </summary>
-        /// <param name="playlistId">Id of the playlist</param>
-        /// <param name="track">Track object</param>
-        /// <exception cref="ArgumentException"></exception>
-        private async Task AddTrackToPlaylist(long playlistId, Track track)
-        {
-            var playlist = await _context.Playlists.FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
-            playlist.Tracks.Add(track);
             await _context.SaveChangesAsync();
         }
         #endregion

@@ -1,6 +1,7 @@
 ﻿@page "/artist/{ArtistId:long}"
 @attribute [Authorize]
 
+@using Chinook.Helpers
 @using Chinook.Models
 @using Chinook.ClientModels
 @using Chinook.Services.Interfaces
@@ -74,17 +75,32 @@ else
         {
             <div class="mb-2">
                 <label for="ExistingPlaylist">Add to existing playlist</label>
-                <select class="form-control" id="ExistingPlaylist">
-                    <option>Playlist 1</option>
-                    <option>Playlist 2</option>
-                    <option>Playlist 3</option>
+                <select class="form-control" id="ExistingPlaylist" @bind="SelectedPlaylist">
+                    <option value="0"> -- Select Playlist -- </option>
+                    @foreach (var playlist in Playlists)
+                    {
+                        <option @key=@playlist.PlaylistId value="@playlist.PlaylistId">@playlist.Name</option>
+                    }
                 </select>
+                <p>Selected Playlist: @SelectedPlaylist</p>
             </div>
+
         }
         <div class="mb-2">
             <label for="NewPlaylist">Create new playlist</label>
             <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @bind="NewPlaylistName" />
         </div>
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="alert alert-danger fade show">
+                <div class="d-flex align-items-start">
+                    <div class="flex-grow-1">
+                        @(new MarkupString(ErrorMessage))
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorMessage"></button>
+                </div>
+            </div>
+        }
     </Body>
     <Footer>
         <button class="btn btn-success" @onclick="AddTrackToPlaylist">Save</button>
@@ -94,7 +110,6 @@ else
 @code {
     [Parameter] public long ArtistId { get; set; }
     [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
     private Modal PlaylistDialog { get; set; }
 
     private ClientModels.ArtistClientModel Artist;
@@ -102,22 +117,40 @@ else
     private DbContext DbContext;
     private PlaylistTrack SelectedTrack;
     private string InfoMessage;
+    private string ErrorMessage;
     private string CurrentUserId;
     private List<ClientModels.Playlist> Playlists;
-    private int selectedPlaylist;
     private string NewPlaylistName;
+    private long SelectedPlaylist;
 
     protected override async Task OnInitializedAsync()
     {
-        await InvokeAsync(StateHasChanged);
-        CurrentUserId = await GetUserId();
-        Artist = await ArtistService.GetArtistByIdAsync(ArtistId);
-        Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            CurrentUserId = await GetUserId();
+            Artist = await ArtistService.GetArtistByIdAsync(ArtistId);
+            Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
+            CloseErrorMessage();
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     private async Task LoadPlaylists()
     {
-        Playlists = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
+        try
+        {
+            Playlists = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
+            CloseErrorMessage();
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
     }
 
     private async Task<string> GetUserId()
@@ -129,18 +162,35 @@ else
 
     private async Task FavoriteTrack(long trackId)
     {
-        var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-        await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
-        Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
-        InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.";
+        try
+        {
+            var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
+            Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
+            InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(track, "Favorites");
+            ErrorMessage = "";
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     private async Task UnfavoriteTrack(long trackId)
     {
-        var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-        await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
-        Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
-        InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.";
+        try
+        {
+            var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
+            Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
+            InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(track, "Favorites");
+            CloseErrorMessage();
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
     }
 
     private async Task OpenPlaylistDialog(long trackId)
@@ -155,17 +205,38 @@ else
     {
         CloseInfoMessage();
         long playlistId = 0;
-        if (!string.IsNullOrWhiteSpace(NewPlaylistName))
+        try
         {
-            playlistId = await PlaylistService.AddTrackToThePlaylist(SelectedTrack.TrackId, NewPlaylistName, CurrentUserId);
+            if(SelectedPlaylist == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(NewPlaylistName))
+                {
+                    playlistId = await PlaylistService.AddTrackToThePlaylist(SelectedTrack.TrackId, NewPlaylistName, CurrentUserId);
+                }
+                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName, playlistId);
+            }
+            else
+            {
+                await PlaylistService.AddTrackToPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
+                var playlistName = Playlists.Find(x => x.PlaylistId == SelectedPlaylist)?.Name;
+                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName, playlistId);
+            }
+            PlaylistDialog.Close();
+            CloseErrorMessage();
         }
-
-        InfoMessage = $"Track {Artist.Name} - {SelectedTrack.AlbumTitle} - {SelectedTrack.TrackName} added to playlist <a href='/playlist/{playlistId}'>{NewPlaylistName}</a>.";
-        PlaylistDialog.Close();
+        catch(Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }       
     }
 
     private void CloseInfoMessage()
     {
         InfoMessage = "";
+    }
+
+    private void CloseErrorMessage()
+    {
+        ErrorMessage = "";
     }
 }
