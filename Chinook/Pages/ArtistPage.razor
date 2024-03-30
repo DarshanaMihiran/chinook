@@ -257,7 +257,7 @@ else
             {
                 if (!string.IsNullOrWhiteSpace(NewPlaylistName))
                 {
-                    playlistId = await PlaylistService.AddTrackToThePlaylist(SelectedTrack.TrackId, NewPlaylistName, CurrentUserId);
+                    playlistId = await PlaylistService.AddTrackToNewPlaylist(SelectedTrack.TrackId, NewPlaylistName, CurrentUserId);
                 }
                 InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName);
             }
@@ -268,7 +268,7 @@ else
                     var playlist = Playlists.Find(x => x.PlaylistId == SelectedPlaylist);
                     if (playlist != null)
                     {
-                        await PlaylistService.AddTrackToPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
+                        await PlaylistService.AddTrackToExistingPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
                         InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, playlist.Name);
                     }
                     else

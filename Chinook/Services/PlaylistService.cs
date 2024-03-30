@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using global::Chinook.ClientModels;
+﻿using global::Chinook.ClientModels;
 using global::Chinook.Helpers;
 using global::Chinook.Models;
 using global::Chinook.Services.Interfaces;
@@ -65,7 +64,7 @@ namespace Chinook.Services
 
             if (favoritePlaylist != null)
             {
-                await AddTrackToPlaylist(favoritePlaylist.PlaylistId, trackId);
+                await AddTrackToExistingPlaylist(favoritePlaylist.PlaylistId, trackId);
             }
             else
             {
@@ -99,7 +98,7 @@ namespace Chinook.Services
         /// <param name="PlaylistName">Name of the playlist</param>
         /// <param name="currentUserId">Logged User Id</param>
         /// <returns>long value</returns>
-        public async Task<long> AddTrackToThePlaylist(long trackId, string PlaylistName, string currentUserId)
+        public async Task<long> AddTrackToNewPlaylist(long trackId, string PlaylistName, string currentUserId)
         {
             var track = await GetTrackById(trackId);
             var playList = await CreatePlaylistAsync(PlaylistName, track, currentUserId);
@@ -116,7 +115,7 @@ namespace Chinook.Services
         /// <param name="playlistId">Id of the playlist</param>
         /// <param name="track">Track object</param>
         /// <exception cref="ArgumentException"></exception>
-        public async Task AddTrackToPlaylist(long playlistId, long trackId)
+        public async Task AddTrackToExistingPlaylist(long playlistId, long trackId)
         {
             var track = await GetTrackById(trackId);
             var playlist = await _context.Playlists.FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");

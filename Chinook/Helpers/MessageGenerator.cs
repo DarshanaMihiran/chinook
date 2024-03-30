@@ -1,5 +1,4 @@
 ﻿using Chinook.ClientModels;
-using Chinook.Models;
 
 namespace Chinook.Helpers
 {
@@ -7,17 +6,22 @@ namespace Chinook.Helpers
     {
         public static string GenerateAssignTrackInfoMessage(PlaylistTrack track, string playlistName)
         {
-            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist {playlistName}.";
+            return GenerateTrackMessage("added to", track, playlistName);
         }
 
         public static string GenerateRemoveTrackInfoMessage(PlaylistTrack track, string playlistName)
         {
-            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist {playlistName}.";
+            return GenerateTrackMessage("removed from", track, playlistName);
         }
 
         public static string GenerateNewPlaylistInfoMessage(PlaylistTrack track, string playlistName)
         {
-            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist {playlistName}.";
+            return GenerateTrackMessage("added to", track, playlistName);
+        }
+
+        private static string GenerateTrackMessage(string action, PlaylistTrack track, string playlistName)
+        {
+            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} {action} playlist {playlistName}.";
         }
     }
 }

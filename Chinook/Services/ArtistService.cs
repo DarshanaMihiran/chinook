@@ -23,7 +23,9 @@ namespace Chinook.Services
         /// <returns>List of ArtistClientModel</returns>
         public async Task<List<ArtistClientModel>> GetArtistsAsync()
         {
-            var artists = await _context.Artists.Include(x => x.Albums).ToListAsync();
+            var artists = await _context.Artists
+                    .Include(x => x.Albums)
+                    .ToListAsync();
             return _mapper.Map<List<ArtistClientModel>>(artists);
         }
 
@@ -33,7 +35,12 @@ namespace Chinook.Services
         /// <returns>List of ArtistClientModel</returns>
         public async Task<List<ArtistClientModel>> GetArtistsBySearchAsync(string searchTerm)
         {
-            var artists = await _context.Artists.Include(x => x.Albums).Where(a => a.Name.ToUpper().Contains(searchTerm.ToUpper())).ToListAsync();
+            var normalizedSearchTerm = searchTerm.ToUpper();
+            var artists = await _context.Artists
+                            .Include(artist => artist.Albums)
+                            .Where(artist => artist.Name.ToUpper()
+                            .Contains(normalizedSearchTerm))
+                            .ToListAsync();
             return _mapper.Map<List<ArtistClientModel>>(artists);
         }
 
@@ -53,7 +60,9 @@ namespace Chinook.Services
         /// <returns>List of AlbumClientModel</returns>
         public async Task<List<AlbumClientModel>> GetAlbumsByArtistIdAsync(int artistId)
         {
-            var albums = await _context.Albums.Where(a => a.ArtistId == artistId).ToListAsync();
+            var albums = await _context.Albums
+                            .Where(a => a.ArtistId == artistId)
+                            .ToListAsync();
             return _mapper.Map<List<AlbumClientModel>>(albums);
         }
         #endregion

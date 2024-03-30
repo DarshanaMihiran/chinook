@@ -1,5 +1,6 @@
 using Chinook;
 using Chinook.Areas.Identity;
+using Chinook.Helpers;
 using Chinook.Models;
 using Chinook.Pages;
 using Chinook.Services;
@@ -20,9 +21,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
-builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<ChinookUser>>();
-builder.Services.AddScoped<IArtistService, ArtistService>();
-builder.Services.AddScoped<IPlaylistService, PlaylistService>();
+ServiceConfigurator.Configure(builder.Services);
 
 var app = builder.Build();
 
