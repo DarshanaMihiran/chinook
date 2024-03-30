@@ -75,8 +75,8 @@ else
         {
             <div class="mb-2">
                 <label for="ExistingPlaylist">Add to existing playlist</label>
-                <select class="form-control" id="ExistingPlaylist" @bind="SelectedPlaylist">
-                    <option value="0"> -- Select Playlist -- </option>
+                <select class="form-control" id="ExistingPlaylist" @bind="SelectedPlaylist" @oninput="HandleDropdownInput">
+                    <option value=0> -- Select Playlist -- </option>
                     @foreach (var playlist in Playlists)
                     {
                         <option @key=@playlist.PlaylistId value="@playlist.PlaylistId">@playlist.Name</option>
@@ -87,7 +87,7 @@ else
         }
         <div class="mb-2">
             <label for="NewPlaylist">Create new playlist</label>
-            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @bind="NewPlaylistName" />
+            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @oninput="HandleNewPlaylistInput" @bind="NewPlaylistName" disabled="@IsNewPlaylistDisabled" />
         </div>
         @if (!string.IsNullOrWhiteSpace(ErrorMessage))
         {
@@ -135,6 +135,33 @@ else
         catch(Exception ex)
         {
             ErrorMessage = ex.Message;
+        }
+    }
+
+    bool IsNewPlaylistDisabled { get; set; } = false;
+
+    void HandleDropdownInput(ChangeEventArgs e)
+    {
+        // If "-- Select Playlist --" is chosen, enable the NewPlaylist textbox
+        if (e.Value?.ToString() == "0")
+        {
+            IsNewPlaylistDisabled = false;
+        }
+        else
+        {
+            IsNewPlaylistDisabled = true;
+            // Reset NewPlaylistName if a playlist is selected from the dropdown
+            NewPlaylistName = string.Empty;
+        }
+    }
+
+    void HandleNewPlaylistInput(ChangeEventArgs e)
+    {
+        var inputText = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(inputText))
+        {
+            // If text is typed, select "-- Select Playlist --" from the dropdown
+            SelectedPlaylist = 0;
         }
     }
 
@@ -212,14 +239,15 @@ else
                 {
                     playlistId = await PlaylistService.AddTrackToThePlaylist(SelectedTrack.TrackId, NewPlaylistName, CurrentUserId);
                 }
-                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName, playlistId);
+                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName);
             }
             else
             {
                 await PlaylistService.AddTrackToPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
                 var playlistName = Playlists.Find(x => x.PlaylistId == SelectedPlaylist)?.Name;
-                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, NewPlaylistName, playlistId);
+                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, playlistName ?? string.Empty);
             }
+            ClearInputs();
             PlaylistDialog.Close();
             CloseErrorMessage();
         }
@@ -237,5 +265,11 @@ else
     private void CloseErrorMessage()
     {
         ErrorMessage = "";
+    }
+
+    private void ClearInputs()
+    {
+        NewPlaylistName = string.Empty;
+        SelectedPlaylist = 0;
     }
 }

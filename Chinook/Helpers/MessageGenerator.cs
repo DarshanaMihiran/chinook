@@ -15,9 +15,9 @@ namespace Chinook.Helpers
             return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist {playlistName}.";
         }
 
-        public static string GenerateNewPlaylistInfoMessage(PlaylistTrack track, string playlistName, long playlistId)
+        public static string GenerateNewPlaylistInfoMessage(PlaylistTrack track, string playlistName)
         {
-            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist <a href='/playlist/{playlistId}'>{playlistName}</a>.";
+            return $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist {playlistName}.";
         }
     }
 }

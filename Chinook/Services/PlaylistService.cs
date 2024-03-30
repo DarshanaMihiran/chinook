@@ -11,6 +11,7 @@ namespace Chinook.Services
     public class PlaylistService : IPlaylistService
     {
         private readonly ChinookContext _context;
+        public event EventHandler PlaylistAdded;
 
         public PlaylistService(ChinookContext context, IMapper mapper)
         {
@@ -18,6 +19,12 @@ namespace Chinook.Services
         }
 
         #region Public Methods
+        protected virtual void OnPlaylistAdded()
+        {
+            PlaylistAdded?.Invoke(this, EventArgs.Empty);
+        }
+
+
         /// <summary>
         /// Get list of tracks by artist id asynchronously
         /// </summary>
@@ -66,9 +73,10 @@ namespace Chinook.Services
             }
             else
             {
-                var playList = await CreatePlaylistAsync("Favorites", track);
+                var playList = await CreatePlaylistAsync("Favorites", track, currentUserId);
                 await CreateUserPlaylistAsync(playList, currentUserId);
             }
+            OnPlaylistAdded();
         }
 
         /// <summary>
@@ -96,8 +104,11 @@ namespace Chinook.Services
         public async Task<long> AddTrackToThePlaylist(long trackId, string PlaylistName, string currentUserId)
         {
             var track = await GetTrackById(trackId);
-            var playList = await CreatePlaylistAsync(PlaylistName, track);
+            var playList = await CreatePlaylistAsync(PlaylistName, track, currentUserId);
             await CreateUserPlaylistAsync(playList, currentUserId);
+
+            OnPlaylistAdded();
+
             return playList.PlaylistId;
         }
 
@@ -185,9 +196,10 @@ namespace Chinook.Services
         /// <param name="track">Track object</param>
         /// <returns>Playlist object</returns>
         /// <exception cref="ArgumentException"></exception>
-        private async Task<Models.Playlist> CreatePlaylistAsync(string PlaylistName, Track track)
+        private async Task<Models.Playlist> CreatePlaylistAsync(string PlaylistName, Track track, string currentUserId)
         {
-            if (await _context.Playlists.AnyAsync(x => x.Name.ToUpper() == PlaylistName.ToUpper()))
+            if (await _context.Playlists.Include(y => y.UserPlaylists).AnyAsync(x => x.Name.ToUpper() == PlaylistName.ToUpper() &&
+                                                    x.UserPlaylists.Any(x => x.UserId == currentUserId)))
                 throw new ArgumentException("Playlist Exists");
 
             var playList = new Models.Playlist()
@@ -199,6 +211,8 @@ namespace Chinook.Services
 
             _context.Playlists.Add(playList);
             await _context.SaveChangesAsync();
+
+            OnPlaylistAdded();
 
             return playList;
         }

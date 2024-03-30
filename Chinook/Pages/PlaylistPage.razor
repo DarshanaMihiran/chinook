@@ -10,7 +10,7 @@
 
 @inject IPlaylistService PlaylistService
 
-<h1>Playlist <strong>@Playlist.Name</strong></h1>
+<h1>Playlist <strong>@(Playlist.Name == "Favorites" ? "My Favorite Tracks" : Playlist.Name)</strong></h1>
 
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
 {

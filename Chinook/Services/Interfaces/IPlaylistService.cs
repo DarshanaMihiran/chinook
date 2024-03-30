@@ -5,6 +5,7 @@ namespace Chinook.Services.Interfaces
 {
     public interface IPlaylistService
     {
+        event EventHandler PlaylistAdded;
         Task<List<PlaylistTrack>> GetTracksByArtistIdAsync(long artistId, string currentUserId);
         Task FavoriteTrackAsync(long trackId, string currentUserId);
         Task UnfavoriteTrackAsync(long trackId, string currentUserId);
