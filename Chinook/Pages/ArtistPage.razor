@@ -214,7 +214,7 @@ else
             await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
             Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
             InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(track, "Favorites");
-            ErrorMessage = "";
+            CloseErrorMessage();
         }
         catch (Exception ex)
         {

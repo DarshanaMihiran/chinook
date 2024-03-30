@@ -1,5 +1,4 @@
-﻿
-@using Chinook.ClientModels
+﻿@using Chinook.ClientModels
 @using Chinook.Services.Interfaces
 @using System.Security.Claims
 <div class="top-row ps-3 navbar navbar-dark">
@@ -27,14 +26,7 @@
                 {
                     <NavLink class="nav-link" @onclick="() => NavigateToPlaylist(playlistItem.PlaylistId)" Match="NavLinkMatch.All">
                         <span class="bi bi-music-note-list me-3" aria-hidden="true"></span>
-                        @if (playlistItem.Name == "Favorites")
-                        {
-                            <span>My Favorite Tracks</span>
-                        }
-                        else
-                        {
-                            <span>@playlistItem.Name</span>
-                        }
+                        @RenderPlaylistName(playlistItem?.Name ?? string.Empty)
                     </NavLink>
                 }
             </div>
@@ -44,30 +36,43 @@
 </div>
 
 @code {
-    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? authenticationState { get; set; }
     [Inject]
-    private IPlaylistService PlaylistService { get; set; }
+    private IPlaylistService? PlaylistService { get; set; }
     [Inject]
-    private NavigationManager NavigationManager { get; set; }
+    private NavigationManager? NavigationManager { get; set; }
 
     private List<Playlist> PlaylistItems = new List<Playlist>();
     private long? favoriteId;
-    private string CurrentUserId;
+    private string? CurrentUserId;
     private bool collapseNavMenu = true;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string? ErrorMessage;
 
     protected override async Task OnParametersSetAsync()
     {
-        CurrentUserId = await GetUserId();
-        PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
-        favoriteId = PlaylistItems.Where(x => x.Name == "Favorites").FirstOrDefault()?.PlaylistId;
-        PlaylistService.PlaylistAdded += HandlePlaylistAdded;
+        try
+        {
+            CurrentUserId = await GetUserId() ?? throw new Exception("User not found");
+            PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId) ?? throw new Exception("PlaylistItems not found");
+            favoriteId = PlaylistItems.Where(x => x.Name == "Favorites").FirstOrDefault()?.PlaylistId;
+            PlaylistService.PlaylistAdded += HandlePlaylistAdded;
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex);
+        }
+    }
+
+    private string RenderPlaylistName(string name)
+    {
+        return name == "Favorites" ? "My Favorite Tracks" : name;
     }
 
     private async void HandlePlaylistAdded(object sender, EventArgs e)
     {
         PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
-        StateHasChanged(); 
+        StateHasChanged();
     }
 
     protected void Dispose(bool disposing)
@@ -77,9 +82,17 @@
 
     private async Task<string> GetUserId()
     {
-        var user = (await authenticationState).User;
-        var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
-        return userId;
+        try
+        {
+            var user = (await authenticationState).User ?? throw new Exception("user not found");
+            var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
+            return userId;
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex);
+            return string.Empty;
+        }
     }
 
     private void NavigateToPlaylist(long playlistId)
@@ -95,5 +108,10 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void HandleError(Exception ex)
+    {
+        ErrorMessage = ex.Message;
     }
 }
