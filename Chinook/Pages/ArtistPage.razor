@@ -30,15 +30,15 @@
 else
 {
     <h1>@Artist.Name</h1>
-        <table class="table table-striped table-hover table-sm">
-            <thead>
-                <tr>
-                    <th>Album title</th>
-                    <th>Track name</th>
-                    <th></th>
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Album title</th>
+                <th>Track name</th>
+                <th></th>
             </tr>
-            </thead>
-            <tbody>
+        </thead>
+        <tbody>
             @foreach (var track in Tracks)
             {
                 <tr>
@@ -57,8 +57,8 @@ else
                     </td>
                 </tr>
             }
-            </tbody>
-        </table>
+        </tbody>
+    </table>
 }
 
 <Modal @ref="PlaylistDialog">
@@ -67,7 +67,7 @@ else
         @if (SelectedTrack != null)
         {
             <div class="form-group mb-2">
-                <label>@Artist.Name - @SelectedTrack.AlbumTitle - @SelectedTrack.TrackName</label>
+                <label>@Artist?.Name - @SelectedTrack.AlbumTitle - @SelectedTrack.TrackName</label>
             </div>
         }
 
@@ -108,41 +108,38 @@ else
 
 @code {
     [Parameter] public long ArtistId { get; set; }
-    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
-    private Modal PlaylistDialog { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? authenticationState { get; set; }
+    private Modal? PlaylistDialog { get; set; }
 
-    private ClientModels.ArtistClientModel Artist;
-    private List<PlaylistTrack> Tracks;
-    private DbContext DbContext;
-    private PlaylistTrack SelectedTrack;
-    private string InfoMessage;
-    private string ErrorMessage;
-    private string CurrentUserId;
-    private List<ClientModels.Playlist> Playlists;
-    private string NewPlaylistName;
+    private ClientModels.ArtistClientModel? Artist;
+    private List<PlaylistTrack>? Tracks;
+    private PlaylistTrack? SelectedTrack;
+    private string? InfoMessage;
+    private string? ErrorMessage;
+    private string? CurrentUserId;
+    private List<ClientModels.Playlist>? Playlists;
+    private string? NewPlaylistName;
     private long SelectedPlaylist;
+    bool IsNewPlaylistDisabled { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             await InvokeAsync(StateHasChanged);
-            CurrentUserId = await GetUserId();
+            CurrentUserId = await GetUserId() ?? throw new Exception("user not found");
             Artist = await ArtistService.GetArtistByIdAsync(ArtistId);
             Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
             CloseErrorMessage();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
     }
 
-    bool IsNewPlaylistDisabled { get; set; } = false;
-
     void HandleDropdownInput(ChangeEventArgs e)
     {
-        // If "-- Select Playlist --" is chosen, enable the NewPlaylist textbox
         if (e.Value?.ToString() == "0")
         {
             IsNewPlaylistDisabled = false;
@@ -150,7 +147,6 @@ else
         else
         {
             IsNewPlaylistDisabled = true;
-            // Reset NewPlaylistName if a playlist is selected from the dropdown
             NewPlaylistName = string.Empty;
         }
     }
@@ -160,7 +156,6 @@ else
         var inputText = e.Value?.ToString();
         if (!string.IsNullOrWhiteSpace(inputText))
         {
-            // If text is typed, select "-- Select Playlist --" from the dropdown
             SelectedPlaylist = 0;
         }
     }
@@ -169,10 +164,10 @@ else
     {
         try
         {
-            Playlists = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
+            Playlists = CurrentUserId == null ? new List<ClientModels.Playlist>() : await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
             CloseErrorMessage();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
@@ -181,22 +176,47 @@ else
 
     private async Task<string> GetUserId()
     {
-        var user = (await authenticationState).User;
-        var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
-        return userId;
+        var authenticationStateValue = await authenticationState;
+
+        if (authenticationStateValue != null)
+        {
+            var user = authenticationStateValue.User;
+
+            if (user != null)
+            {
+                var userIdClaim = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier));
+
+                if (userIdClaim != null)
+                {
+                    return userIdClaim.Value;
+                }
+                else
+                {
+                    throw new Exception("userIdClaim not found");
+                }
+            }
+            else
+            {
+                throw new Exception("user not found");
+            }
+        }
+        else
+        {
+            throw new Exception("authenticationState not found");
+        }
     }
 
     private async Task FavoriteTrack(long trackId)
     {
         try
         {
-            var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            var track = Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception("track not found");
             await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
             Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
             InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(track, "Favorites");
             ErrorMessage = "";
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
@@ -206,13 +226,13 @@ else
     {
         try
         {
-            var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+            var track = Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception("track not found");
             await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
             Tracks = await PlaylistService.GetTracksByArtistIdAsync(ArtistId, CurrentUserId);
             InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(track, "Favorites");
             CloseErrorMessage();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
@@ -223,8 +243,8 @@ else
     {
         await LoadPlaylists();
         CloseInfoMessage();
-        SelectedTrack = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-        PlaylistDialog.Open();
+        SelectedTrack = Tracks?.FirstOrDefault(t => t.TrackId == trackId);
+        PlaylistDialog?.Open();
     }
 
     private async Task AddTrackToPlaylist()
@@ -233,7 +253,7 @@ else
         long playlistId = 0;
         try
         {
-            if(SelectedPlaylist == 0)
+            if (SelectedPlaylist == 0)
             {
                 if (!string.IsNullOrWhiteSpace(NewPlaylistName))
                 {
@@ -243,18 +263,32 @@ else
             }
             else
             {
-                await PlaylistService.AddTrackToPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
-                var playlistName = Playlists.Find(x => x.PlaylistId == SelectedPlaylist)?.Name;
-                InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, playlistName ?? string.Empty);
+                if (Playlists != null)
+                {
+                    var playlist = Playlists.Find(x => x.PlaylistId == SelectedPlaylist);
+                    if (playlist != null)
+                    {
+                        await PlaylistService.AddTrackToPlaylist(SelectedPlaylist, SelectedTrack.TrackId);
+                        InfoMessage = MessageGenerator.GenerateNewPlaylistInfoMessage(SelectedTrack, playlist.Name);
+                    }
+                    else
+                    {
+                        throw new Exception("Playlist not found");
+                    }
+                }
+                else
+                {
+                    throw new Exception("Playlist not found");
+                }
             }
             ClearInputs();
-            PlaylistDialog.Close();
+            PlaylistDialog?.Close();
             CloseErrorMessage();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-        }       
+        }
     }
 
     private void CloseInfoMessage()
