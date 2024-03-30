@@ -10,7 +10,7 @@
 
 @inject IPlaylistService PlaylistService
 
-<h1>Playlist <strong>@(Playlist.Name == "Favorites" ? "My Favorite Tracks" : Playlist.Name)</strong></h1>
+<h1>Playlist <strong>@playlistName</strong></h1>
 
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
 {
@@ -38,7 +38,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var track in Playlist.Tracks)
+            @foreach (var track in Playlist?.Tracks)
             {
                 <tr>
                     <td>@track.ArtistName - @track.AlbumTitle - @track.TrackName</td>
@@ -67,48 +67,53 @@ else
 
 @code {
     [Parameter] public long PlaylistId { get; set; }
-    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? authenticationState { get; set; }
 
-    private Chinook.ClientModels.Playlist Playlist;
-    private string CurrentUserId;
-    private string InfoMessage;
-    private string ErrorMessage;
+    private Chinook.ClientModels.Playlist? Playlist;
+    private string? CurrentUserId;
+    private string? InfoMessage;
+    private string? ErrorMessage;
+    private string? playlistName;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            CurrentUserId = await GetUserId();
+            CurrentUserId = await GetUserId() ?? throw new Exception("User not found");
             await InvokeAsync(StateHasChanged);
+
             Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
+            SetPlaylistName();
+
             CloseErrorMessage();
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            HandleError(ex);
         }
     }
 
     private async Task<string> GetUserId()
     {
-        var user = (await authenticationState).User;
-        var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
-        return userId;
+        var user = await authenticationState;
+        var userIdClaim = user.User.FindFirst(u => u.Type == ClaimTypes.NameIdentifier);
+        var userId = userIdClaim?.Value;
+        return userId ?? string.Empty;
     }
 
     private async Task FavoriteTrack(long trackId)
     {
         try
         {
-            var track = GetTrack(trackId);
-            await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
-            Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
-            InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(track, "Favorites");
-            CloseErrorMessage();
+            await UpdatePlaylistAfterAction(trackId, async () =>
+            {
+                await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
+                InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(GetTrack(trackId), "Favorites");
+            });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            HandleError(ex);
         }
     }
 
@@ -116,31 +121,39 @@ else
     {
         try
         {
-            var track = GetTrack(trackId);
-            await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
-            Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
-            InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(track, "Favorites");
-            CloseErrorMessage();
+            await UpdatePlaylistAfterAction(trackId, async () =>
+            {
+                await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
+                InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(GetTrack(trackId), "Favorites");
+            });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            HandleError(ex);
         }
+    }
+
+    private async Task UpdatePlaylistAfterAction(long trackId, Func<Task> action)
+    {
+        await action();
+        Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
+        CloseErrorMessage();
     }
 
     private async Task RemoveTrack(long trackId)
     {
         try
         {
-            var track = GetTrack(trackId);
-            await PlaylistService.RemoveTrackFromPlaylist(trackId, PlaylistId);
-            Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
-            InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(track, Playlist.Name);
-            CloseErrorMessage();
+            await UpdatePlaylistAfterAction(trackId, async () =>
+            {
+                var track = GetTrack(trackId);
+                await PlaylistService.RemoveTrackFromPlaylist(trackId, PlaylistId);
+                InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(track, Playlist.Name);
+            });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            HandleError(ex);
         }
     }
 
@@ -154,8 +167,18 @@ else
         ErrorMessage = "";
     }
 
-    private PlaylistTrack? GetTrack(long trackId)
+    private PlaylistTrack GetTrack(long trackId)
     {
-        return Playlist.Tracks.FirstOrDefault(t => t.TrackId == trackId);
+        return Playlist?.Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception("track not found");
+    }
+
+    private void SetPlaylistName()
+    {
+        playlistName = Playlist?.Name == "Favorites" ? "My Favorite Tracks" : Playlist?.Name;
+    }
+
+    private void HandleError(Exception ex)
+    {
+        ErrorMessage = ex.Message;
     }
 }
