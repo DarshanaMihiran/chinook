@@ -17,9 +17,9 @@ namespace Chinook.Common
             ErrorMessage = "";
         }
 
-        protected void HandleError(Exception ex)
+        protected void HandleError(string errorMessage)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = errorMessage;
         }
     }
 }

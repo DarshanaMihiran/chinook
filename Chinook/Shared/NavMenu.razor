@@ -1,9 +1,4 @@
-﻿@using Chinook.ClientModels
-@using Chinook.Common
-@using Chinook.Services.Interfaces
-@using System.Security.Claims
-
-@inherits BaseComponent
+﻿@inherits BaseComponent
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -26,104 +21,24 @@
 
         </div>
         <div class="nav-item px-3">
-
             <h3 class="px-3 text-white">Playlists</h3>
-            <div class="nav-item px-3">
-                @foreach (var playlistItem in PlaylistItems)
-                {
-                    <NavLink class="nav-link" @onclick="() => NavigateToPlaylist(playlistItem.PlaylistId)" Match="NavLinkMatch.All">
-                        <span class="bi bi-music-note-list me-3" aria-hidden="true"></span>
-                        @RenderPlaylistName(playlistItem?.Name ?? string.Empty)
-                    </NavLink>
-                }
-            </div>
+            @if (PlaylistItems == null)
+            {
+                <Loading />
+            }
+            else
+            {
+                <div class="nav-item px-3">
+                    @foreach (var playlistItem in PlaylistItems)
+                    {
+                        <NavLink class="nav-link" @onclick="() => NavigateToPlaylist(playlistItem.PlaylistId)" Match="NavLinkMatch.All">
+                            <span class="bi bi-music-note-list me-3" aria-hidden="true"></span>
+                            @RenderPlaylistName(playlistItem?.Name ?? string.Empty)
+                        </NavLink>
+                    }
+                </div>
+            }            
         </div>
 
     </nav>
 </div>
-
-@code {
-    [CascadingParameter] private Task<AuthenticationState>? authenticationState { get; set; }
-    [Inject]
-    private IPlaylistService? PlaylistService { get; set; }
-    [Inject]
-    private NavigationManager? NavigationManager { get; set; }
-
-    private List<Playlist> PlaylistItems = new List<Playlist>();
-    private long? favoriteId;
-    private string? CurrentUserId;
-    private bool collapseNavMenu = true;
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        try
-        {
-            CurrentUserId = await GetUserId() ?? throw new Exception("User not found");
-            PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId) ?? throw new Exception("PlaylistItems not found");
-            favoriteId = PlaylistItems.Where(x => x.Name == "Favorites").FirstOrDefault()?.PlaylistId;
-            PlaylistService.PlaylistAdded += HandlePlaylistAdded;
-            CloseErrorMessage();
-        }
-        catch (Exception ex)
-        {
-            HandleError(ex);
-        }
-    }
-
-    private string RenderPlaylistName(string name)
-    {
-        return name == "Favorites" ? "My Favorite Tracks" : name;
-    }
-
-    private async void HandlePlaylistAdded(object sender, EventArgs e)
-    {
-        try
-        {
-            PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
-            StateHasChanged();
-            CloseErrorMessage();
-        }
-        catch(Exception ex)
-        {
-            HandleError(ex);
-        }
-        
-    }
-
-    protected void Dispose(bool disposing)
-    {
-        PlaylistService.PlaylistAdded -= HandlePlaylistAdded;
-    }
-
-    private async Task<string?> GetUserId()
-    {
-        try
-        {
-            var user = (await authenticationState).User ?? throw new Exception("user not found");
-            var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
-            CloseErrorMessage();
-            return userId;
-        }
-        catch (Exception ex)
-        {
-            HandleError(ex);
-            return string.Empty;
-        }
-    }
-
-    private void NavigateToPlaylist(long playlistId)
-    {
-        NavigationManager?.NavigateTo($"playlist/{playlistId}", true);
-    }
-
-    private void NavigateToFavorites()
-    {
-        NavigationManager?.NavigateTo($"playlist/{favoriteId}", true);
-    }
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-}

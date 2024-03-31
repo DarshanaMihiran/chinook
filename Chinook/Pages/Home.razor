@@ -1,11 +1,6 @@
 ﻿@page "/"
 @attribute [Authorize]
 
-
-@using Chinook.ClientModels
-@using Chinook.Common
-@using Chinook.Services.Interfaces
-
 @inherits BaseComponent
 @inject IArtistService ArtistsService
 
@@ -42,35 +37,4 @@ else
     </table>
 
     <Error ErrorMessage="@ErrorMessage" />
-}
-
-@code {
-    private List<ArtistClientModel>? Artists;
-    private string? searchTerm;
-
-    protected override async Task OnInitializedAsync() {
-        await InvokeAsync(StateHasChanged);
-        await LoadArtists();
-    }
-
-    private async Task SearchArtists(ChangeEventArgs e)
-    {
-        searchTerm = e.Value.ToString();
-        await LoadArtists();
-    }
-
-    private async Task LoadArtists()
-    {
-        try
-        {
-            Artists = string.IsNullOrWhiteSpace(searchTerm) ?
-                await ArtistsService.GetArtistsAsync() :
-                await ArtistsService.GetArtistsBySearchAsync(searchTerm);
-            CloseErrorMessage();
-        }
-        catch (Exception ex)
-        {
-            HandleError(ex);
-        }
-    }
 }
