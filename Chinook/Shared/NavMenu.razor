@@ -1,6 +1,10 @@
 ﻿@using Chinook.ClientModels
+@using Chinook.Common
 @using Chinook.Services.Interfaces
 @using System.Security.Claims
+
+@inherits BaseComponent
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Chinook</a>
@@ -12,6 +16,9 @@
 
 <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
     <nav class="flex-column">
+        <div class="nav-item px-3">
+        <Error ErrorMessage="@ErrorMessage" />
+        </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="oi oi-home" aria-hidden="true"></span>Home
@@ -47,7 +54,6 @@
     private string? CurrentUserId;
     private bool collapseNavMenu = true;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-    private string? ErrorMessage;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -57,6 +63,7 @@
             PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId) ?? throw new Exception("PlaylistItems not found");
             favoriteId = PlaylistItems.Where(x => x.Name == "Favorites").FirstOrDefault()?.PlaylistId;
             PlaylistService.PlaylistAdded += HandlePlaylistAdded;
+            CloseErrorMessage();
         }
         catch (Exception ex)
         {
@@ -71,8 +78,17 @@
 
     private async void HandlePlaylistAdded(object sender, EventArgs e)
     {
-        PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
-        StateHasChanged();
+        try
+        {
+            PlaylistItems = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
+            StateHasChanged();
+            CloseErrorMessage();
+        }
+        catch(Exception ex)
+        {
+            HandleError(ex);
+        }
+        
     }
 
     protected void Dispose(bool disposing)
@@ -80,12 +96,13 @@
         PlaylistService.PlaylistAdded -= HandlePlaylistAdded;
     }
 
-    private async Task<string> GetUserId()
+    private async Task<string?> GetUserId()
     {
         try
         {
             var user = (await authenticationState).User ?? throw new Exception("user not found");
             var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
+            CloseErrorMessage();
             return userId;
         }
         catch (Exception ex)
@@ -97,21 +114,16 @@
 
     private void NavigateToPlaylist(long playlistId)
     {
-        NavigationManager.NavigateTo($"playlist/{playlistId}", true);
+        NavigationManager?.NavigateTo($"playlist/{playlistId}", true);
     }
 
     private void NavigateToFavorites()
     {
-        NavigationManager.NavigateTo($"playlist/{favoriteId}", true);
+        NavigationManager?.NavigateTo($"playlist/{favoriteId}", true);
     }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
-    }
-
-    private void HandleError(Exception ex)
-    {
-        ErrorMessage = ex.Message;
     }
 }

@@ -118,7 +118,16 @@ namespace Chinook.Services
         public async Task AddTrackToExistingPlaylist(long playlistId, long trackId)
         {
             var track = await GetTrackById(trackId);
-            var playlist = await _context.Playlists.FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
+            var playlist = await _context.Playlists
+                                        .Include(p => p.Tracks)
+                                        .FirstOrDefaultAsync(x => x.PlaylistId == playlistId)
+                          ?? throw new ArgumentException("Playlist not found");
+
+            if (playlist.Tracks.Any(t => t.TrackId == trackId))
+            {
+                throw new InvalidOperationException("The track is already in the playlist.");
+            }
+
             playlist.Tracks.Add(track);
             await _context.SaveChangesAsync();
         }

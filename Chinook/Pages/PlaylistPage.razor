@@ -2,12 +2,14 @@
 @attribute [Authorize]
 
 @using Chinook.ClientModels
+@using Chinook.Common
 @using Chinook.Helpers
 @using Chinook.Models
 @using Chinook.Services.Interfaces
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims;
 
+@inherits BaseComponent
 @inject IPlaylistService PlaylistService
 
 <h1>Playlist <strong>@playlistName</strong></h1>
@@ -63,6 +65,8 @@ else
             }
         </tbody>
     </table>
+
+    <Error ErrorMessage="@ErrorMessage" />
 }
 
 @code {
@@ -71,8 +75,6 @@ else
 
     private Chinook.ClientModels.Playlist? Playlist;
     private string? CurrentUserId;
-    private string? InfoMessage;
-    private string? ErrorMessage;
     private string? playlistName;
 
     protected override async Task OnInitializedAsync()
@@ -157,16 +159,6 @@ else
         }
     }
 
-    private void CloseInfoMessage()
-    {
-        InfoMessage = "";
-    }
-
-    private void CloseErrorMessage()
-    {
-        ErrorMessage = "";
-    }
-
     private PlaylistTrack GetTrack(long trackId)
     {
         return Playlist?.Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception("track not found");
@@ -175,10 +167,5 @@ else
     private void SetPlaylistName()
     {
         playlistName = Playlist?.Name == "Favorites" ? "My Favorite Tracks" : Playlist?.Name;
-    }
-
-    private void HandleError(Exception ex)
-    {
-        ErrorMessage = ex.Message;
     }
 }
