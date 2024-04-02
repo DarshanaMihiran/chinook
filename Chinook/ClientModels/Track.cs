@@ -1,10 +1,10 @@
 ﻿namespace Chinook.ClientModels
 {
-    public partial class TrackClientModel
+    public partial class Track
     {
-        public TrackClientModel()
+        public Track()
         {
-            InvoiceLines = new HashSet<InvoiceLineClientModel>();
+            InvoiceLines = new HashSet<InvoiceLine>();
             Playlists = new HashSet<Playlist>();
         }
 
@@ -18,10 +18,10 @@
         public long? Bytes { get; set; }
         public byte[] UnitPrice { get; set; } = null!;
 
-        public virtual AlbumClientModel? Album { get; set; }
-        public virtual GenreClientModel? Genre { get; set; }
-        public virtual MediaTypeClientModel MediaType { get; set; } = null!;
-        public virtual ICollection<InvoiceLineClientModel> InvoiceLines { get; set; }
+        public virtual Album? Album { get; set; }
+        public virtual Genre? Genre { get; set; }
+        public virtual MediaType MediaType { get; set; } = null!;
+        public virtual ICollection<InvoiceLine> InvoiceLines { get; set; }
 
         public virtual ICollection<Playlist> Playlists { get; set; }
     }

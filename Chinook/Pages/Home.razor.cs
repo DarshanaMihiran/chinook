@@ -5,7 +5,7 @@ namespace Chinook.Pages
 {
     public partial class Home
     {
-        private List<ArtistClientModel>? Artists;
+        private List<Artist>? Artists;
         private string? searchTerm;
 
         protected override async Task OnInitializedAsync()

@@ -21,19 +21,19 @@ namespace Chinook.Services
         /// Get artists information asynchronously
         /// </summary>
         /// <returns>List of ArtistClientModel</returns>
-        public async Task<List<ArtistClientModel>> GetArtistsAsync()
+        public async Task<List<Artist>> GetArtistsAsync()
         {
             var artists = await _context.Artists
                     .Include(x => x.Albums)
                     .ToListAsync();
-            return _mapper.Map<List<ArtistClientModel>>(artists);
+            return _mapper.Map<List<Artist>>(artists);
         }
 
         /// <summary>
         /// Get artists information for search asynchronously
         /// </summary>
         /// <returns>List of ArtistClientModel</returns>
-        public async Task<List<ArtistClientModel>> GetArtistsBySearchAsync(string searchTerm)
+        public async Task<List<Artist>> GetArtistsBySearchAsync(string searchTerm)
         {
             var normalizedSearchTerm = searchTerm.ToUpper();
             var artists = await _context.Artists
@@ -41,29 +41,29 @@ namespace Chinook.Services
                             .Where(artist => artist.Name.ToUpper()
                             .Contains(normalizedSearchTerm))
                             .ToListAsync();
-            return _mapper.Map<List<ArtistClientModel>>(artists);
+            return _mapper.Map<List<Artist>>(artists);
         }
 
         /// <summary>
         /// Get artist information by artist id asynchronously
         /// </summary>
         /// <returns>ArtistClientModel object</returns>
-        public async Task<ArtistClientModel> GetArtistByIdAsync(long artistId)
+        public async Task<Artist> GetArtistByIdAsync(long artistId)
         {
             var artist = await _context.Artists.SingleOrDefaultAsync(a => a.ArtistId == artistId);
-            return _mapper.Map<ArtistClientModel>(artist);
+            return _mapper.Map<Artist>(artist);
         }
 
         /// <summary>
         /// Get albums information by artist id asynchronously
         /// </summary>
         /// <returns>List of AlbumClientModel</returns>
-        public async Task<List<AlbumClientModel>> GetAlbumsByArtistIdAsync(int artistId)
+        public async Task<List<Album>> GetAlbumsByArtistIdAsync(int artistId)
         {
             var albums = await _context.Albums
                             .Where(a => a.ArtistId == artistId)
                             .ToListAsync();
-            return _mapper.Map<List<AlbumClientModel>>(albums);
+            return _mapper.Map<List<Album>>(albums);
         }
         #endregion
     }

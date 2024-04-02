@@ -1,8 +1,10 @@
-﻿using global::Chinook.ClientModels;
+﻿using AutoMapper;
+using Chinook.Common;
+using global::Chinook.ClientModels;
 using global::Chinook.Helpers;
-using global::Chinook.Models;
 using global::Chinook.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Metadata;
 
 namespace Chinook.Services
 {
@@ -10,10 +12,12 @@ namespace Chinook.Services
     {
         private readonly ChinookContext _context;
         public event EventHandler? PlaylistAdded;
+        private readonly IMapper _mapper;
 
-        public PlaylistService(ChinookContext context)
+        public PlaylistService(ChinookContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         #region Public Methods
@@ -35,7 +39,7 @@ namespace Chinook.Services
                     TrackName = t.Name,
                     IsFavorite = t.Playlists
                         .Any(p => p.UserPlaylists
-                            .Any(up => up.UserId == currentUserId && up.Playlist.Name == "Favorites"))
+                            .Any(up => up.UserId == currentUserId && up.Playlist.Name == Constants.Favorites))
                 })
                 .ToListAsync();
         }
@@ -48,7 +52,7 @@ namespace Chinook.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task UnfavoriteTrackAsync(long trackId, string currentUserId)
         {
-            var favoritePlaylist = await GetFavoritePlaylist(currentUserId) ?? throw new ArgumentException("Favorites not found");
+            var favoritePlaylist = await GetFavoritePlaylist(currentUserId) ?? throw new ArgumentException(Constants.FavoritesNotFoundMessage);
             await RemoveTrackFromPlaylist(trackId, favoritePlaylist.PlaylistId);
         }
 
@@ -68,7 +72,7 @@ namespace Chinook.Services
             }
             else
             {
-                var playList = await CreatePlaylistAsync("Favorites", track, currentUserId);
+                var playList = await CreatePlaylistAsync(Constants.Favorites, track, currentUserId);
                 await CreateUserPlaylistAsync(playList, currentUserId);
             }
             OnPlaylistAdded();
@@ -84,6 +88,7 @@ namespace Chinook.Services
             return await _context.UserPlaylists
                 .Include(x => x.Playlist)
                 .Where(up => up.UserId == currentUserId)
+                .OrderByDescending(up => up.Playlist.Name == Constants.Favorites)
                 .Select(t => new ClientModels.Playlist()
                 {
                     PlaylistId = t.Playlist.PlaylistId,
@@ -117,18 +122,19 @@ namespace Chinook.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task AddTrackToExistingPlaylist(long playlistId, long trackId)
         {
-            var track = await GetTrackById(trackId);
+            var track = await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException(Constants.TrackNotFoundMessage);
+
             var playlist = await _context.Playlists
                                         .Include(p => p.Tracks)
                                         .FirstOrDefaultAsync(x => x.PlaylistId == playlistId)
-                          ?? throw new ArgumentException("Playlist not found");
+                          ?? throw new ArgumentException(Constants.PlaylistNotFoundMessage);
 
             if (playlist.Tracks.Any(t => t.TrackId == trackId))
             {
-                throw new InvalidOperationException("The track is already in the playlist.");
+                throw new InvalidOperationException(Constants.TheTrackExistsMessage);
             }
-
-            playlist.Tracks.Add(track);
+            var trackModel = _mapper.Map<Models.Track>(track);
+            playlist.Tracks.Add(trackModel);
             await _context.SaveChangesAsync();
         }
 
@@ -140,10 +146,10 @@ namespace Chinook.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task RemoveTrackFromPlaylist(long trackId, long playlistId)
         {
-            var track = await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException("Track not found");
+            var track = await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException(Constants.TrackNotFoundMessage);
             var playlist = await _context.Playlists
                 .Include(x => x.Tracks)
-                .FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException("Playlist not found");
+                .FirstOrDefaultAsync(x => x.PlaylistId == playlistId) ?? throw new ArgumentException(Constants.PlaylistNotFoundMessage);
             playlist.Tracks.Remove(track);
             await _context.SaveChangesAsync();
         }
@@ -172,7 +178,7 @@ namespace Chinook.Services
                         TrackName = t.Name,
                         IsFavorite = t.Playlists
                             .Any(pl => pl.UserPlaylists
-                                .Any(up => up.UserId == currentUserId && up.Playlist.Name == "Favorites"))
+                                .Any(up => up.UserId == currentUserId && up.Playlist.Name == Constants.Favorites))
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -185,11 +191,12 @@ namespace Chinook.Services
         /// </summary>
         /// <param name="currentUserId">Logged User Id</param>
         /// <returns></returns>
-        private async Task<UserPlaylist?> GetFavoritePlaylist(string currentUserId)
+        private async Task<ClientModels.UserPlaylist?> GetFavoritePlaylist(string currentUserId)
         {
-            return await _context.UserPlaylists
+            var userPlaylists = await _context.UserPlaylists
                 .Include(up => up.Playlist)
-                .FirstOrDefaultAsync(up => up.UserId == currentUserId && up.Playlist.Name == "Favorites");
+                .FirstOrDefaultAsync(up => up.UserId == currentUserId && up.Playlist.Name == Constants.Favorites);
+            return _mapper.Map<ClientModels.UserPlaylist>(userPlaylists);
         }
 
         /// <summary>
@@ -198,9 +205,9 @@ namespace Chinook.Services
         /// <param name="trackId">Track Id</param>
         /// <returns>Track object</returns>
         /// <exception cref="ArgumentException"></exception>
-        private async Task<Track> GetTrackById(long trackId)
+        private async Task<Models.Track> GetTrackById(long trackId)
         {
-            return await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException("Track not found");
+            return await _context.Tracks.FindAsync(trackId) ?? throw new ArgumentException(Constants.TrackNotFoundMessage);
         }
 
         /// <summary>
@@ -210,19 +217,21 @@ namespace Chinook.Services
         /// <param name="track">Track object</param>
         /// <returns>Playlist object</returns>
         /// <exception cref="ArgumentException"></exception>
-        private async Task<Models.Playlist> CreatePlaylistAsync(string PlaylistName, Track track, string currentUserId)
+        private async Task<Models.Playlist> CreatePlaylistAsync(string PlaylistName, Models.Track track, string currentUserId)
         {
             if (await _context.Playlists
                     .Include(y => y.UserPlaylists)
                     .AnyAsync(x => x.Name.ToUpper() == PlaylistName.ToUpper() &&
                                                     x.UserPlaylists.Any(x => x.UserId == currentUserId)))
-                throw new ArgumentException("Playlist Exists");
+                throw new ArgumentException(Constants.PlaylistExistsMessage);
+
+            var trackModel = _mapper.Map<Models.Track>(track);
 
             var playList = new Models.Playlist()
             {
                 PlaylistId = IdGenerator.GenerateUniqueId(),
                 Name = PlaylistName,
-                Tracks = new List<Track> { track },
+                Tracks = new List<Models.Track> { trackModel },
             };
 
             _context.Playlists.Add(playList);
@@ -240,7 +249,7 @@ namespace Chinook.Services
         /// <param name="currentUserId">Logged user id</param>
         private async Task CreateUserPlaylistAsync(Models.Playlist playlist, string currentUserId)
         {
-            var userPlayList = new UserPlaylist
+            var userPlayList = new Models.UserPlaylist
             {
                 Playlist = playlist,
                 PlaylistId = playlist.PlaylistId,

@@ -1,4 +1,5 @@
 ﻿using Chinook.ClientModels;
+using Chinook.Common;
 using Chinook.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -19,7 +20,7 @@ namespace Chinook.Pages
         {
             try
             {
-                CurrentUserId = await GetUserId() ?? throw new Exception("User not found");
+                CurrentUserId = await GetUserId() ?? throw new Exception(Constants.UserNotFoundMessage);
                 await InvokeAsync(StateHasChanged);
 
                 Playlist = await PlaylistService.GetPlaylistById(PlaylistId, CurrentUserId);
@@ -48,7 +49,7 @@ namespace Chinook.Pages
                 await UpdatePlaylistAfterAction(trackId, async () =>
                 {
                     await PlaylistService.FavoriteTrackAsync(trackId, CurrentUserId);
-                    InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(GetTrack(trackId), "Favorites");
+                    InfoMessage = MessageGenerator.GenerateAssignTrackInfoMessage(GetTrack(trackId), Constants.Favorites);
                 });
             }
             catch (Exception ex)
@@ -64,7 +65,7 @@ namespace Chinook.Pages
                 await UpdatePlaylistAfterAction(trackId, async () =>
                 {
                     await PlaylistService.UnfavoriteTrackAsync(trackId, CurrentUserId);
-                    InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(GetTrack(trackId), "Favorites");
+                    InfoMessage = MessageGenerator.GenerateRemoveTrackInfoMessage(GetTrack(trackId), Constants.Favorites);
                 });
             }
             catch (Exception ex)
@@ -99,12 +100,12 @@ namespace Chinook.Pages
 
         private PlaylistTrack GetTrack(long trackId)
         {
-            return Playlist?.Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception("track not found");
+            return Playlist?.Tracks?.FirstOrDefault(t => t.TrackId == trackId) ?? throw new Exception(Constants.TrackNotFoundMessage);
         }
 
         private void SetPlaylistName()
         {
-            playlistName = Playlist?.Name == "Favorites" ? "My Favorite Tracks" : Playlist?.Name;
+            playlistName = Playlist?.Name == Constants.Favorites ? Constants.MyFavoriteTracksMessage : Playlist?.Name;
         }
     }
 }

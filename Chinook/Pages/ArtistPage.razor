@@ -5,16 +5,9 @@
 @inject IArtistService ArtistService
 @inject IPlaylistService PlaylistService
 
-@if (!string.IsNullOrWhiteSpace(InfoMessage))
+@if (string.IsNullOrWhiteSpace(ErrorMessage))
 {
-    <div class="alert alert-info fade show">
-        <div class="d-flex align-items-start">
-            <div class="flex-grow-1">
-                @(new MarkupString(InfoMessage))
-            </div>
-            <button type="button" class="btn-close" aria-label="Close" @onclick="CloseInfoMessage"></button>
-        </div>
-    </div>
+    <Info InfoMessage="@InfoMessage" />
 }
 
 @if (Artist == null)
@@ -69,7 +62,7 @@ else
         {
             <div class="mb-2">
                 <label for="ExistingPlaylist">Add to existing playlist</label>
-                <select class="form-control" id="ExistingPlaylist" @bind="SelectedPlaylist" @oninput="HandleDropdownInput">
+                <select class="form-control" id="ExistingPlaylist" @bind="SelectedPlaylist">
                     <option value=0> -- Select Playlist -- </option>
                     @foreach (var playlist in Playlists)
                     {
@@ -80,8 +73,10 @@ else
         }
         <div class="mb-2">
             <label for="NewPlaylist">Create new playlist</label>
-            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @oninput="HandleNewPlaylistInput" @bind="NewPlaylistName" disabled="@IsNewPlaylistDisabled" />
+            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @bind="NewPlaylistName" />
         </div>
+
+        <Info InfoMessage="@InfoMessage" />
         <Error ErrorMessage="@ErrorMessage" />
     </Body>
     <Footer>

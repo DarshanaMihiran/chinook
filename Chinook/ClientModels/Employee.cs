@@ -1,11 +1,11 @@
 ﻿namespace Chinook.ClientModels
 {
-    public partial class EmployeeClientModel
+    public partial class Employee
     {
-        public EmployeeClientModel()
+        public Employee()
         {
-            Customers = new HashSet<CustomerClientModel>();
-            InverseReportsToNavigation = new HashSet<EmployeeClientModel>();
+            Customers = new HashSet<Customer>();
+            InverseReportsToNavigation = new HashSet<Employee>();
         }
 
         public long EmployeeId { get; set; }
@@ -24,8 +24,8 @@
         public string? Fax { get; set; }
         public string? Email { get; set; }
 
-        public virtual EmployeeClientModel? ReportsToNavigation { get; set; }
-        public virtual ICollection<CustomerClientModel> Customers { get; set; }
-        public virtual ICollection<EmployeeClientModel> InverseReportsToNavigation { get; set; }
+        public virtual Employee? ReportsToNavigation { get; set; }
+        public virtual ICollection<Customer> Customers { get; set; }
+        public virtual ICollection<Employee> InverseReportsToNavigation { get; set; }
     }
 }

@@ -1,10 +1,10 @@
 ﻿namespace Chinook.ClientModels
 {
-    public partial class InvoiceClientModel
+    public partial class Invoice
     {
-        public InvoiceClientModel()
+        public Invoice()
         {
-            InvoiceLines = new HashSet<InvoiceLineClientModel>();
+            InvoiceLines = new HashSet<InvoiceLine>();
         }
 
         public long InvoiceId { get; set; }
@@ -17,7 +17,7 @@
         public string? BillingPostalCode { get; set; }
         public byte[] Total { get; set; } = null!;
 
-        public virtual CustomerClientModel Customer { get; set; } = null!;
-        public virtual ICollection<InvoiceLineClientModel> InvoiceLines { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
+        public virtual ICollection<InvoiceLine> InvoiceLines { get; set; }
     }
 }

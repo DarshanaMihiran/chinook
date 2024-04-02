@@ -2,7 +2,7 @@
 
 namespace Chinook.ClientModels
 {
-    public class UserPlaylistClientModel
+    public class UserPlaylist
     {
         public string? UserId { get; set; }
         public long PlaylistId { get; set; }

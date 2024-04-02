@@ -9,18 +9,18 @@ namespace Chinook.Helpers
     {
         public MappingProfile()
         {
-            CreateMap<Artist, ArtistClientModel>();
-            CreateMap<Album, AlbumClientModel>();
-            CreateMap<UserPlaylist, UserPlaylistClientModel>();
-            CreateMap<Track, TrackClientModel>();
-            CreateMap<Models.Playlist, ClientModels.Playlist>();
-            CreateMap<Customer, CustomerClientModel>();
-            CreateMap<Employee, EmployeeClientModel>();
-            CreateMap<Genre, GenreClientModel>();
-            CreateMap<Invoice, InvoiceClientModel>();
-            CreateMap<InvoiceLine, InvoiceLineClientModel>();
-            CreateMap<MediaType, MediaTypeClientModel>();
-            CreateMap<Track, PlaylistTrack>();
+            CreateMap<Models.Artist, ClientModels.Artist>().ReverseMap();
+            CreateMap<Models.Album, ClientModels.Album>().ReverseMap();
+            CreateMap<Models.UserPlaylist, ClientModels.UserPlaylist>().ReverseMap();
+            CreateMap<Models.Track, ClientModels.Track>().ReverseMap();
+            CreateMap<Models.Playlist, ClientModels.Playlist>().ReverseMap();
+            CreateMap<Models.Customer, ClientModels.Customer>().ReverseMap();
+            CreateMap<Models.Employee, ClientModels.Employee>().ReverseMap();
+            CreateMap<Models.Genre, ClientModels.Genre>().ReverseMap();
+            CreateMap<Models.Invoice, ClientModels.Invoice>().ReverseMap();
+            CreateMap<Models.InvoiceLine, ClientModels.InvoiceLine>().ReverseMap();
+            CreateMap<Models.MediaType, ClientModels.MediaType>().ReverseMap();
+            CreateMap<Models.Track, PlaylistTrack>().ReverseMap();
 
         }
     }
