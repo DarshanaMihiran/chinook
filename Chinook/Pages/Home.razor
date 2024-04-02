@@ -1,12 +1,16 @@
 ﻿@page "/"
 @attribute [Authorize]
 
-@using Chinook.Models
-@using Microsoft.EntityFrameworkCore
+@inherits BaseComponent
+@inject IArtistService ArtistsService
 
 <PageTitle>Index</PageTitle>
 
 <h1>Artists</h1>
+
+<div class="form-group">
+    <input type="text" class="form-control" placeholder="Search artist..." @bind="searchTerm" @oninput="SearchArtists" />
+</div>
 
 @if (Artists == null)
 {
@@ -31,28 +35,6 @@ else
             }
         </tbody>
     </table>
-}
 
-@code {
-    private List<Artist> Artists;
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
-
-    protected override async Task OnInitializedAsync() {
-        await InvokeAsync(StateHasChanged);
-        Artists = await GetArtists();
-    }
-
-    public async Task<List<Artist>> GetArtists()
-    {   
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        var users = dbContext.Users.Include(a => a.UserPlaylists).ToList();
-        
-        return dbContext.Artists.ToList();
-    }
-
-    public async Task<List<Album>> GetAlbumsForArtist(int artistId)
-    {
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
-    }
+    <Error ErrorMessage="@ErrorMessage" />
 }

@@ -1,6 +1,10 @@
 using Chinook;
 using Chinook.Areas.Identity;
+using Chinook.Helpers;
 using Chinook.Models;
+using Chinook.Pages;
+using Chinook.Services;
+using Chinook.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +17,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<ChinookUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ChinookContext>();
 
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
-builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<ChinookUser>>();
+ServiceConfigurator.Configure(builder.Services);
 
 var app = builder.Build();
 

@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inherits BaseComponent
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Chinook</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -10,28 +12,33 @@
 <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
+        <Error ErrorMessage="@ErrorMessage" />
+        </div>
+        <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="oi oi-home" aria-hidden="true"></span>Home
             </NavLink>
+
         </div>
         <div class="nav-item px-3">
-@* 
-            <NavLink class="nav-link" href="playlist/playlistnumber">
-                <i class="bi bi-music-note-list me-3" style="font-size: 1.25em"></i>My favorite tracks
-            </NavLink>
-*@
-</div>
+            <h3 class="px-3 text-white">Playlists</h3>
+            @if (PlaylistItems == null)
+            {
+                <Loading />
+            }
+            else
+            {
+                <div class="nav-item px-3">
+                    @foreach (var playlistItem in PlaylistItems)
+                    {
+                        <NavLink class="nav-link" @onclick="() => NavigateToPlaylist(playlistItem.PlaylistId)" Match="NavLinkMatch.All">
+                            <span class="bi bi-music-note-list me-3" aria-hidden="true"></span>
+                            @RenderPlaylistName(playlistItem?.Name ?? string.Empty)
+                        </NavLink>
+                    }
+                </div>
+            }            
+        </div>
 
     </nav>
 </div>
-
-@code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-}
